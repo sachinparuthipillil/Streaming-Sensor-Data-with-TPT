@@ -10,12 +10,13 @@ This repository contains files required to build docker images for Sensor data s
 
 3. Provide Teradata connection details in the docker-compose.yaml file for the following environment variables:
     - 'host' - Teradata host url
-    - 'uname' - Teradata login u
+    - 'uname' - Teradata login name
     - 'tdDbName' - Teradata Database (schema) Name
     - 'logonmech' - Logon Mechanism to be used. For eg. LDAP, TDNEGO etc.
 
 4. Create '.env' file in the base project directory and provide the Teradata login password as show below:
-    DB_PASSWORD=Replace_this_with_DB_Password
+
+        DB_PASSWORD=Replace_this_with_DB_Password
 
 ## Execution
 
