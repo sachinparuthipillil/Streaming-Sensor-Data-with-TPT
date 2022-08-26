@@ -1,0 +1,57 @@
+DEFINE JOB IMPORT_TO_TERADATA
+Description 'Import data to Teradata from Kafka Server'
+(
+    DEFINE OPERATOR IMPORT_TO_TERADATA_STREAM
+    TYPE STREAM
+    SCHEMA *
+    ATTRIBUTES
+    (
+      VARCHAR TdPid=@tdDbUrl,
+      VARCHAR UserName=@tdUName,
+      VARCHAR UserPassWord=@tdPass,
+      VARCHAR TargetDatabase=@tdDefaultDB,
+      VARCHAR TargetTable='STG_SENSOR_EV',
+      VARCHAR LogonMech=@tdLogonMech
+    );
+    
+    DEFINE SCHEMA STG_SENSOR_EV_SCHEMA
+    (
+      PAYLOAD JSON(16776192)
+    );
+
+    DEFINE OPERATOR STG_SENSOR_EV_SCHEMA_Detail
+    TYPE DATACONNECTOR PRODUCER
+    SCHEMA STG_SENSOR_EV_SCHEMA
+    ATTRIBUTES
+    (
+        VARCHAR TextDelimiter = '^|^',
+        VARCHAR Format = 'Delimited',
+        VARCHAR AccessModuleName = @tptAccessModuleName,
+        VARCHAR AccessModuleInitStr =  '-ADD_LINE_FEED y
+                                        -MODE C
+                                        -TOPIC '|| @kafkaTopic ||'
+                                        -BROKERS '|| @kafkaServers ||' 
+                                        -PARTITION 0 
+                    										-BATCHMODE Y
+                                        -CONFIG compression.codec=none
+                                        -CONFIG group.id='|| @kafkaTopic ||'
+                                        -MSGLIMIT '|| @tptKafkaMsgLmt ||'
+                                        -RWAIT 10
+                                        -OFFSET_STORE_DIRECTORY '|| @tptKafkaOffsetDirectory ||'
+                                        '
+    );
+    
+    APPLY
+    (
+       'INSERT INTO '||@tdDefaultDB||'.STG_SENSOR_EV(
+			PAYLOAD,
+			ACQ_DTTM
+			
+	   ) VALUES (
+			:PAYLOAD,
+			CURRENT_TIMESTAMP(0)
+		);'
+    )
+    TO OPERATOR(IMPORT_TO_TERADATA_STREAM [1])
+    SELECT * FROM OPERATOR (STG_SENSOR_EV_SCHEMA_Detail [1]);
+);

@@ -1,0 +1,86 @@
+services:             
+    zookeeper:
+        image: "bitnami/zookeeper:3"
+        ports:
+            - "2181:2181"
+        environment:
+            - ALLOW_ANONYMOUS_LOGIN=yes
+        networks: 
+            - my-stream-network
+        logging:
+            driver: none
+      
+    kafkaBroker:
+        image: "bitnami/kafka:2"
+        ports:
+            - "9092:9092"
+        environment:
+            - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+            - ALLOW_PLAINTEXT_LISTENER=yes
+        depends_on:
+            - zookeeper
+        healthcheck:
+            test:
+                ["CMD", "kafka-topics.sh", "--list", "--zookeeper", "zookeeper:2181"]
+            interval: 10s
+            timeout: 10s
+            retries: 4
+        networks: 
+            - my-stream-network
+        logging:
+            driver: none
+            
+    topic: 
+        build: 
+            context: ./
+            dockerfile: ./Topic/Dockerfile
+        image: stream_topic
+        depends_on: 
+            kafkaBroker:
+                condition: service_healthy
+        environment: 
+            kafkaServer: &myKafkaServer 'kafkaBroker:9092'
+            kafkaTopic: &myTopic 'MasksMfgSensorDataQueue'
+        networks: 
+            - my-stream-network
+            
+    producer: 
+        build: 
+            context: ./
+            dockerfile: ./Producer/Dockerfile
+        image: stream_producer
+        depends_on: 
+            topic:
+                condition: service_started
+        environment: 
+            kafkaServer: *myKafkaServer
+            kafkaTopic: *myTopic
+            DAYS: '2'
+            START_DATE: '2022-08-30'
+        networks: 
+            - my-stream-network
+        
+    consumer: 
+        build: 
+            context: ./
+            dockerfile: ./Consumer/Dockerfile
+        image: stream_consumer
+        depends_on: 
+            producer:
+                condition: service_started
+        environment: 
+            kafkaServer: *myKafkaServer
+            kafkaTopic: *myTopic
+            host: ''
+            uname: ''
+            tdPwd: ${DB_PASSWORD}
+            tdDbName: ''
+            logonmech: ''
+            offsetDir: '/tmp'
+        networks: 
+            - my-stream-network
+            
+networks:
+    my-stream-network:
+        name: my-stream-network
+    
