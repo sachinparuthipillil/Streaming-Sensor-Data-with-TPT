@@ -12,7 +12,7 @@ RUN pip3 install --no-cache-dir \
 	
 
 #Install Teradata Tools & Utilities
-ADD Consumer/TeradataToolsAndUtilitiesBase__linux_*.tar tmp/
+ADD Consumer/TeradataToolsAndUtilitiesBase__linux_*.tar.gz tmp/
 #ADD ttu.repo /etc/yum.repos.d/ttu.repo
 COPY Consumer/load_sensor_data.tpt /tmp/
 COPY Consumer/Params.py /tmp/
